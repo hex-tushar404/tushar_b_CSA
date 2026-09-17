@@ -1,0 +1,5 @@
+1. IAM Least-Privilege Explanation:
+    IAM groups were created for administrators, developers and auditors according to their responsibilities. Developers receive limited EC2 read/describe permissions and controlled access to the application S3 bucket. Auditors receive read-only permissions required for security assessment. Administrative access is separated into the Admin group and protected using MFA enforcement. The EC2 instance accesses S3 through an IAM role and instance profile, eliminating the need for hardcoded AWS access keys.
+
+2. Do attackers only target big companies?
+    No. EC2 experiment demonstrates that publicly accessible infrastructure can receive unsolicited authentication attempts regardless of the organization's size. Internet-facing servers are continuously scanned by automated systems looking for exposed services, weak credentials and vulnerable configurations.
