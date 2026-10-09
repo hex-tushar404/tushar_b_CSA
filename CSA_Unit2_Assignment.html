@@ -1,0 +1,754 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>CSA Unit 2 – IAM &amp; Least Privilege Enforcement</title>
+<style>
+  @page {
+    size: A4;
+    margin: 20mm 18mm 20mm 18mm;
+  }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 12pt;
+    line-height: 1.55;
+    color: #1a1a1a;
+    margin: 0;
+    padding: 0;
+  }
+  /* ── Cover Page ── */
+  .cover {
+    page-break-after: always;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    min-height: 90vh;
+    text-align: center;
+    padding: 40px;
+  }
+  .cover h1 {
+    font-size: 28pt;
+    color: #0d47a1;
+    margin-bottom: 8px;
+    border-bottom: 3px solid #0d47a1;
+    padding-bottom: 12px;
+  }
+  .cover h2 {
+    font-size: 18pt;
+    color: #333;
+    margin-top: 6px;
+    font-weight: 500;
+  }
+  .cover .subtitle {
+    font-size: 14pt;
+    color: #555;
+    margin-top: 30px;
+  }
+  .cover .meta {
+    margin-top: 40px;
+    font-size: 12pt;
+    color: #444;
+    line-height: 2;
+  }
+  .cover .meta strong { color: #0d47a1; }
+
+  /* ── Section headings ── */
+  h2 {
+    color: #0d47a1;
+    font-size: 16pt;
+    border-bottom: 2px solid #1565c0;
+    padding-bottom: 4px;
+    margin-top: 28px;
+  }
+  h3 {
+    color: #1565c0;
+    font-size: 13pt;
+    margin-top: 20px;
+  }
+  h4 { color: #333; font-size: 12pt; margin-top: 14px; }
+
+  /* ── Code blocks ── */
+  pre {
+    background: #f5f5f5;
+    border: 1px solid #ddd;
+    border-left: 4px solid #1565c0;
+    padding: 10px 14px;
+    font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+    font-size: 9pt;
+    line-height: 1.45;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    page-break-inside: avoid;
+  }
+  code {
+    font-family: 'Fira Code', 'Consolas', 'Courier New', monospace;
+    background: #eee;
+    padding: 1px 4px;
+    border-radius: 3px;
+    font-size: 10pt;
+  }
+  pre code { background: none; padding: 0; }
+
+  /* ── Images / screenshots ── */
+  .screenshot {
+    text-align: center;
+    margin: 16px 0;
+    page-break-inside: avoid;
+  }
+  .screenshot img {
+    max-width: 100%;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.12);
+  }
+  .screenshot .caption {
+    font-size: 10pt;
+    color: #555;
+    margin-top: 6px;
+    font-style: italic;
+  }
+
+  /* ── Table ── */
+  table {
+    border-collapse: collapse;
+    width: 100%;
+    margin: 12px 0;
+    font-size: 11pt;
+  }
+  th, td {
+    border: 1px solid #bbb;
+    padding: 7px 10px;
+    text-align: left;
+  }
+  th {
+    background: #1565c0;
+    color: #fff;
+    font-weight: 600;
+  }
+  tr:nth-child(even) { background: #f4f8fc; }
+
+  /* ── Misc ── */
+  .page-break { page-break-before: always; }
+  ul, ol { margin-left: 18px; }
+  li { margin-bottom: 3px; }
+  .note {
+    background: #e3f2fd;
+    border-left: 4px solid #1565c0;
+    padding: 10px 14px;
+    margin: 14px 0;
+    font-size: 11pt;
+  }
+</style>
+</head>
+<body>
+
+<!-- ════════════════════════════ COVER PAGE ════════════════════════════ -->
+<div class="cover">
+  <h1>Cloud Security &amp; Architecture</h1>
+  <h2>Unit 2 – IAM &amp; Least Privilege Enforcement</h2>
+  <div class="subtitle">5th Semester Assignment</div>
+  <div class="meta">
+    <strong>Subject:</strong> Cloud Security &amp; Architecture (CSA)<br>
+    <strong>Unit:</strong> 2 – Identity and Access Management<br>
+    <strong>Tool Used:</strong> Terraform (IaC) + AWS Console<br>
+    <strong>Date:</strong> September 2026
+  </div>
+</div>
+
+<!-- ════════════════════════════ TABLE OF CONTENTS ════════════════════════════ -->
+<h2>Table of Contents</h2>
+<ol>
+  <li>Assignment Objective</li>
+  <li>Introduction to IAM &amp; Least Privilege</li>
+  <li>Project Structure</li>
+  <li>Terraform Code – Detailed Walkthrough
+    <ul>
+      <li>4.1 Provider &amp; S3 Bucket</li>
+      <li>4.2 IAM Groups (Admins, Developers, Auditors)</li>
+      <li>4.3 Custom Policies – Least Privilege</li>
+      <li>4.4 MFA Enforcement for Admins</li>
+      <li>4.5 EC2 → S3 IAM Role (No Hardcoded Credentials)</li>
+      <li>4.6 Variables &amp; Outputs</li>
+    </ul>
+  </li>
+  <li>Deployment Steps</li>
+  <li>AWS Console Screenshots &amp; Verification</li>
+  <li>How Least Privilege is Enforced – Summary</li>
+  <li>Conclusion</li>
+</ol>
+
+<!-- ════════════════════════════ 1. OBJECTIVE ════════════════════════════ -->
+<div class="page-break"></div>
+<h2>1. Assignment Objective</h2>
+<p>
+  Create a rigorous IAM structure on AWS that demonstrates the <strong>Principle of Least Privilege</strong>.
+  The specific requirements are:
+</p>
+<ol>
+  <li>Create distinct <strong>IAM Groups</strong> — <code>Admins</code>, <code>Developers</code>, <code>Auditors</code> — each with custom policies scoped to only what that role needs.</li>
+  <li>Enforce <strong>Multi-Factor Authentication (MFA)</strong> for the Admin group.</li>
+  <li>Create a custom <strong>IAM Role</strong> that allows an EC2 instance to access S3 securely <em>without hardcoded credentials</em>.</li>
+</ol>
+
+<!-- ════════════════════════════ 2. INTRO ════════════════════════════ -->
+<h2>2. Introduction to IAM &amp; Least Privilege</h2>
+<h3>What is AWS IAM?</h3>
+<p>
+  AWS Identity and Access Management (IAM) is a service that helps you securely control access to AWS resources.
+  IAM lets you create and manage AWS users, groups, roles, and their permissions using policies (JSON documents).
+</p>
+
+<h3>Key IAM Concepts</h3>
+<table>
+  <tr><th>Concept</th><th>Description</th></tr>
+  <tr><td><strong>User</strong></td><td>An individual identity with long-term credentials (password, access keys).</td></tr>
+  <tr><td><strong>Group</strong></td><td>A collection of users that share the same permission policies.</td></tr>
+  <tr><td><strong>Role</strong></td><td>An identity with temporary credentials, assumable by services (e.g., EC2) or users.</td></tr>
+  <tr><td><strong>Policy</strong></td><td>A JSON document that defines Allow/Deny statements for specific actions and resources.</td></tr>
+  <tr><td><strong>MFA</strong></td><td>Multi-Factor Authentication adds a second layer of sign-in security.</td></tr>
+  <tr><td><strong>Instance Profile</strong></td><td>A container for an IAM Role that can be attached to an EC2 instance.</td></tr>
+</table>
+
+<h3>Principle of Least Privilege</h3>
+<p>
+  The Principle of Least Privilege states that every user, service, or process should be granted
+  <strong>only the minimum permissions necessary</strong> to perform its intended function — nothing more.
+  This minimises the blast radius of compromised credentials and accidental changes.
+</p>
+
+<!-- ════════════════════════════ 3. PROJECT STRUCTURE ════════════════════════════ -->
+<div class="page-break"></div>
+<h2>3. Project Structure</h2>
+<pre><code>iam-least-privilege-project/
+├── main.tf          # All IAM groups, policies, role, instance profile, S3 bucket
+├── variables.tf     # Input variables (region, bucket name)
+├── outputs.tf       # Useful outputs after terraform apply
+└── UNIT 2/          # AWS Console screenshots for verification
+    └── *.jpeg</code></pre>
+
+<table>
+  <tr><th>File</th><th>Purpose</th></tr>
+  <tr><td><code>main.tf</code></td><td>Contains all IAM Groups, custom policies, MFA enforcement policy, EC2-S3 Role, Instance Profile, and S3 bucket.</td></tr>
+  <tr><td><code>variables.tf</code></td><td>Declares input variables — AWS region and S3 bucket name.</td></tr>
+  <tr><td><code>outputs.tf</code></td><td>Outputs group names, role ARN, instance profile name, and bucket name after deployment.</td></tr>
+</table>
+
+<!-- ════════════════════════════ 4. CODE WALKTHROUGH ════════════════════════════ -->
+<h2>4. Terraform Code – Detailed Walkthrough</h2>
+
+<h3>4.1 Provider Configuration &amp; S3 Bucket</h3>
+<p>We configure the AWS provider with a specific region and create a demo S3 bucket with all public access blocked:</p>
+<pre><code>terraform {
+  required_version = ">= 1.5.0"
+  required_providers {
+    aws = {
+      source  = "hashicorp/aws"
+      version = "~> 5.0"
+    }
+  }
+}
+
+provider "aws" {
+  region = var.aws_region
+}
+
+# S3 bucket that the EC2 role is allowed to access
+resource "aws_s3_bucket" "app_bucket" {
+  bucket = var.s3_bucket_name
+}
+
+resource "aws_s3_bucket_public_access_block" "app_bucket" {
+  bucket                  = aws_s3_bucket.app_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
+  restrict_public_buckets = true
+}</code></pre>
+
+<div class="note">
+  <strong>Least Privilege:</strong> All public access is blocked on the S3 bucket using
+  <code>aws_s3_bucket_public_access_block</code> — the bucket is private by default.
+</div>
+
+<h3>4.2 IAM Groups</h3>
+<p>Three distinct groups are created, each representing a different role within the organisation:</p>
+<pre><code>resource "aws_iam_group" "admins" {
+  name = "Admins"
+}
+
+resource "aws_iam_group" "developers" {
+  name = "Developers"
+}
+
+resource "aws_iam_group" "auditors" {
+  name = "Auditors"
+}</code></pre>
+
+<div class="page-break"></div>
+<h3>4.3 Custom Policies – Principle of Least Privilege</h3>
+
+<h4>4.3.1 Admins Policy</h4>
+<p>
+  Admins get broad operational access to EC2, S3, IAM management, CloudWatch, and Logs.
+  However, they are <strong>explicitly denied</strong> billing, AWS Organizations, and account-level actions —
+  so even the "admin" tier is <em>not root-equivalent</em>.
+</p>
+<pre><code>data "aws_iam_policy_document" "admins_policy" {
+  statement {
+    sid    = "AllowServiceAdministration"
+    effect = "Allow"
+    actions = [
+      "ec2:*",
+      "s3:*",
+      "iam:Get*",
+      "iam:List*",
+      "iam:CreateUser",
+      "iam:CreateGroup",
+      "iam:CreateRole",
+      "iam:AttachUserPolicy",
+      "iam:AttachGroupPolicy",
+      "iam:AttachRolePolicy",
+      "iam:PutUserPolicy",
+      "iam:PutGroupPolicy",
+      "iam:PutRolePolicy",
+      "cloudwatch:*",
+      "logs:*"
+    ]
+    resources = ["*"]
+  }
+
+  statement {
+    sid       = "DenyBillingAndOrgChanges"
+    effect    = "Deny"
+    actions   = ["aws-portal:*", "organizations:*", "account:*"]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "admins_policy" {
+  name        = "AdminsLeastPrivilegePolicy"
+  description = "Admin permissions scoped away from billing/org root actions"
+  policy      = data.aws_iam_policy_document.admins_policy.json
+}
+
+resource "aws_iam_group_policy_attachment" "admins_attach" {
+  group      = aws_iam_group.admins.name
+  policy_arn = aws_iam_policy.admins_policy.arn
+}</code></pre>
+
+<div class="note">
+  <strong>Key Design:</strong> Even the Admins group does not have <code>*:*</code> root-level access. Billing
+  (<code>aws-portal:*</code>), AWS Organizations (<code>organizations:*</code>), and account management
+  (<code>account:*</code>) are explicitly denied.
+</div>
+
+<div class="page-break"></div>
+<h4>4.3.2 Developers Policy</h4>
+<p>
+  Developers can run/stop/terminate EC2 instances (only in the configured region) and read/write
+  only the app S3 bucket. <strong>IAM actions are explicitly denied</strong> to prevent privilege escalation.
+</p>
+<pre><code>data "aws_iam_policy_document" "developers_policy" {
+  statement {
+    sid    = "EC2DevAccess"
+    effect = "Allow"
+    actions = [
+      "ec2:Describe*",
+      "ec2:RunInstances",
+      "ec2:StartInstances",
+      "ec2:StopInstances",
+      "ec2:TerminateInstances",
+      "ec2:CreateTags"
+    ]
+    resources = ["*"]
+    condition {
+      test     = "StringEquals"
+      variable = "aws:RequestedRegion"
+      values   = [var.aws_region]
+    }
+  }
+
+  statement {
+    sid    = "S3DevBucketAccess"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:ListBucket"
+    ]
+    resources = [
+      aws_s3_bucket.app_bucket.arn,
+      "${aws_s3_bucket.app_bucket.arn}/*"
+    ]
+  }
+
+  statement {
+    sid       = "DenyIAMAccess"
+    effect    = "Deny"
+    actions   = ["iam:*"]
+    resources = ["*"]
+  }
+}</code></pre>
+
+<div class="note">
+  <strong>Least Privilege highlights:</strong>
+  <ul>
+    <li>EC2 access is region-locked via a <code>Condition</code> block.</li>
+    <li>S3 access is scoped to <em>only one specific bucket</em> (ARN-based).</li>
+    <li>IAM actions are explicitly denied — Developers cannot create users, change policies, or escalate privileges.</li>
+  </ul>
+</div>
+
+<h4>4.3.3 Auditors Policy</h4>
+<p>
+  Auditors receive <strong>read-only</strong> access across IAM, S3, EC2, CloudTrail, and AWS Config —
+  enough for compliance review, <em>zero write/modify access</em>.
+</p>
+<pre><code>data "aws_iam_policy_document" "auditors_policy" {
+  statement {
+    sid    = "ReadOnlyAudit"
+    effect = "Allow"
+    actions = [
+      "iam:Get*",
+      "iam:List*",
+      "iam:GenerateCredentialReport",
+      "iam:GenerateServiceLastAccessedDetails",
+      "s3:Get*",
+      "s3:List*",
+      "ec2:Describe*",
+      "cloudtrail:LookupEvents",
+      "cloudtrail:GetTrailStatus",
+      "cloudtrail:DescribeTrails",
+      "config:Describe*",
+      "config:Get*",
+      "config:List*"
+    ]
+    resources = ["*"]
+  }
+}</code></pre>
+
+<div class="page-break"></div>
+<h3>4.4 MFA Enforcement for Admins</h3>
+<p>
+  An additional policy is attached to the Admins group that <strong>denies almost every action</strong>
+  unless the caller has authenticated with MFA. Users can still manage their own MFA device
+  so they are not permanently locked out.
+</p>
+<pre><code>data "aws_iam_policy_document" "require_mfa" {
+  statement {
+    sid       = "AllowViewAccountInfo"
+    effect    = "Allow"
+    actions   = ["iam:GetAccountPasswordPolicy", "iam:ListVirtualMFADevices"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowManageOwnMFA"
+    effect = "Allow"
+    actions = [
+      "iam:CreateVirtualMFADevice",
+      "iam:DeleteVirtualMFADevice",
+      "iam:EnableMFADevice",
+      "iam:ResyncMFADevice",
+      "iam:ListMFADevices",
+      "iam:GetUser",
+      "iam:ChangePassword"
+    ]
+    resources = [
+      "arn:aws:iam::*:mfa/${aws:username}",
+      "arn:aws:iam::*:user/${aws:username}"
+    ]
+  }
+
+  statement {
+    sid       = "DenyAllExceptListedUnlessMFAed"
+    effect    = "Deny"
+    not_actions = [
+      "iam:CreateVirtualMFADevice",
+      "iam:EnableMFADevice",
+      "iam:GetUser",
+      "iam:ListMFADevices",
+      "iam:ListVirtualMFADevices",
+      "iam:ResyncMFADevice",
+      "sts:GetSessionToken"
+    ]
+    resources = ["*"]
+
+    condition {
+      test     = "BoolIfExists"
+      variable = "aws:MultiFactorAuthPresent"
+      values   = ["false"]
+    }
+  }
+}
+
+resource "aws_iam_policy" "require_mfa" {
+  name        = "RequireMFAForAdmins"
+  description = "Denies all actions for Admins unless authenticated with MFA"
+  policy      = data.aws_iam_policy_document.require_mfa.json
+}
+
+resource "aws_iam_group_policy_attachment" "admins_mfa_attach" {
+  group      = aws_iam_group.admins.name
+  policy_arn = aws_iam_policy.require_mfa.arn
+}</code></pre>
+
+<div class="note">
+  <strong>How MFA enforcement works:</strong> The <code>DenyAllExceptListedUnlessMFAed</code> statement uses
+  <code>NotAction</code> and a condition on <code>aws:MultiFactorAuthPresent = false</code>.
+  If the user has NOT used MFA, all actions except MFA self-management are denied.
+</div>
+
+<div class="page-break"></div>
+<h3>4.5 EC2 → S3 IAM Role (No Hardcoded Credentials)</h3>
+<p>
+  A custom IAM Role is created that EC2 instances can assume via an <strong>Instance Profile</strong>.
+  This enables secure S3 access without storing any access keys on the instance.
+</p>
+<pre><code># Trust policy: allow EC2 service to assume this role
+data "aws_iam_policy_document" "ec2_assume_role" {
+  statement {
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+    principals {
+      type        = "Service"
+      identifiers = ["ec2.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "ec2_s3_role" {
+  name               = "EC2-S3-Access-Role"
+  assume_role_policy = data.aws_iam_policy_document.ec2_assume_role.json
+}
+
+# Scoped S3 access — only the app bucket
+data "aws_iam_policy_document" "ec2_s3_access" {
+  statement {
+    sid    = "AllowScopedS3Access"
+    effect = "Allow"
+    actions = [
+      "s3:GetObject",
+      "s3:PutObject",
+      "s3:ListBucket"
+    ]
+    resources = [
+      aws_s3_bucket.app_bucket.arn,
+      "${aws_s3_bucket.app_bucket.arn}/*"
+    ]
+  }
+}
+
+resource "aws_iam_policy" "ec2_s3_access" {
+  name        = "EC2-S3-Scoped-Access"
+  description = "Allows EC2 instances assuming this role to read/write only the app bucket"
+  policy      = data.aws_iam_policy_document.ec2_s3_access.json
+}
+
+resource "aws_iam_role_policy_attachment" "ec2_s3_attach" {
+  role       = aws_iam_role.ec2_s3_role.name
+  policy_arn = aws_iam_policy.ec2_s3_access.arn
+}
+
+resource "aws_iam_instance_profile" "ec2_s3_profile" {
+  name = "EC2-S3-Access-Profile"
+  role = aws_iam_role.ec2_s3_role.name
+}</code></pre>
+
+<div class="note">
+  <strong>Security benefits:</strong>
+  <ul>
+    <li>No access keys or secrets are stored on the EC2 instance.</li>
+    <li>The role uses <em>temporary credentials</em> that AWS automatically rotates.</li>
+    <li>S3 access is scoped to only the app bucket's ARN — a compromised instance cannot reach unrelated buckets.</li>
+  </ul>
+</div>
+
+<h3>4.6 Variables &amp; Outputs</h3>
+
+<h4>variables.tf</h4>
+<pre><code>variable "aws_region" {
+  description = "AWS region to deploy into"
+  type        = string
+  default     = "us-east-1"
+}
+
+variable "s3_bucket_name" {
+  description = "Globally unique name for the demo S3 bucket"
+  type        = string
+  # Set your own value in terraform.tfvars
+}</code></pre>
+
+<h4>outputs.tf</h4>
+<pre><code>output "admins_group_name" {
+  value = aws_iam_group.admins.name
+}
+
+output "developers_group_name" {
+  value = aws_iam_group.developers.name
+}
+
+output "auditors_group_name" {
+  value = aws_iam_group.auditors.name
+}
+
+output "ec2_s3_role_arn" {
+  value = aws_iam_role.ec2_s3_role.arn
+}
+
+output "ec2_instance_profile_name" {
+  value = aws_iam_instance_profile.ec2_s3_profile.name
+}
+
+output "s3_bucket_name" {
+  value = aws_s3_bucket.app_bucket.bucket
+}</code></pre>
+
+<!-- ════════════════════════════ 5. DEPLOYMENT ════════════════════════════ -->
+<div class="page-break"></div>
+<h2>5. Deployment Steps</h2>
+<ol>
+  <li>
+    <strong>Clone the repository and navigate to the project:</strong>
+    <pre><code>git clone &lt;repository-url&gt;
+cd iam-least-privilege-project</code></pre>
+  </li>
+  <li>
+    <strong>Create <code>terraform.tfvars</code></strong> with a globally unique bucket name:
+    <pre><code>s3_bucket_name = "kaveri-iam-unit2-demo"</code></pre>
+  </li>
+  <li>
+    <strong>Initialise Terraform</strong> (downloads the AWS provider plugin):
+    <pre><code>terraform init</code></pre>
+  </li>
+  <li>
+    <strong>Preview the plan:</strong>
+    <pre><code>terraform plan</code></pre>
+  </li>
+  <li>
+    <strong>Apply the configuration:</strong>
+    <pre><code>terraform apply</code></pre>
+    This creates 17 AWS resources: 3 IAM groups, 5 IAM policies, 4 policy attachments,
+    1 IAM role, 1 role-policy attachment, 1 instance profile, 1 S3 bucket, and 1 public access block.
+  </li>
+</ol>
+
+<!-- ════════════════════════════ 6. SCREENSHOTS ════════════════════════════ -->
+<div class="page-break"></div>
+<h2>6. AWS Console Screenshots &amp; Verification</h2>
+
+<h3>6.1 Terraform Init – Successful Initialization</h3>
+<div class="screenshot">
+  <img src="img6_init.jpeg" alt="Terraform Init">
+  <div class="caption">Figure 1: <code>terraform init</code> — AWS provider v5.100.0 installed successfully.</div>
+</div>
+
+<h3>6.2 Terraform Apply – All 17 Resources Created</h3>
+<div class="screenshot">
+  <img src="img7_apply.jpeg" alt="Terraform Apply">
+  <div class="caption">Figure 2: <code>terraform apply</code> — 17 resources added, 0 changed, 0 destroyed. Outputs show all three groups, the EC2-S3 Role ARN, Instance Profile, and S3 bucket name.</div>
+</div>
+
+<div class="page-break"></div>
+<h3>6.3 IAM User Groups – Admins, Auditors, Developers</h3>
+<div class="screenshot">
+  <img src="img1_groups.jpeg" alt="IAM User Groups">
+  <div class="caption">Figure 3: AWS Console → IAM → User Groups showing all three groups (Admins, Auditors, Developers) with permissions defined.</div>
+</div>
+
+<h3>6.4 Admins Group – Attached Policies (Least Privilege + MFA)</h3>
+<div class="screenshot">
+  <img src="img2_admins.jpeg" alt="Admins Group Policies">
+  <div class="caption">Figure 4: Admins group has two customer-managed policies attached — <code>AdminsLeastPrivilegePolicy</code> and <code>RequireMFAForAdmins</code>.</div>
+</div>
+
+<div class="page-break"></div>
+<h3>6.5 EC2-S3-Access-Role – Trust Relationship</h3>
+<div class="screenshot">
+  <img src="img3_trust.jpeg" alt="EC2 S3 Role Trust Relationship">
+  <div class="caption">Figure 5: IAM → Roles → EC2-S3-Access-Role. The trust policy allows <code>ec2.amazonaws.com</code> to assume this role via <code>sts:AssumeRole</code>.</div>
+</div>
+
+<h3>6.6 S3 Bucket – kaveri-iam-unit2-demo</h3>
+<div class="screenshot">
+  <img src="img4_s3.jpeg" alt="S3 Bucket">
+  <div class="caption">Figure 6: Amazon S3 → Buckets showing the <code>kaveri-iam-unit2-demo</code> bucket created by Terraform.</div>
+</div>
+
+<div class="page-break"></div>
+<h3>6.7 MFA Device Assigned</h3>
+<div class="screenshot">
+  <img src="img8_mfa.jpeg" alt="MFA Assigned">
+  <div class="caption">Figure 7: IAM → Security Credentials showing a Virtual MFA device assigned, confirming MFA enforcement for the Admins group.</div>
+</div>
+
+<h3>6.8 IAM User Created Successfully</h3>
+<div class="screenshot">
+  <img src="img5_users.jpeg" alt="IAM User Created">
+  <div class="caption">Figure 8: IAM → Users showing <code>terraform-admin</code> user created successfully via the Admin account.</div>
+</div>
+
+<!-- ════════════════════════════ 7. SUMMARY ════════════════════════════ -->
+<div class="page-break"></div>
+<h2>7. How Least Privilege is Enforced – Summary</h2>
+<table>
+  <tr>
+    <th>Group / Role</th>
+    <th>Permissions Granted</th>
+    <th>Restrictions / Denies</th>
+  </tr>
+  <tr>
+    <td><strong>Admins</strong></td>
+    <td>EC2, S3, IAM management, CloudWatch, Logs</td>
+    <td>Billing, Organizations, Account actions denied; MFA required for all actions</td>
+  </tr>
+  <tr>
+    <td><strong>Developers</strong></td>
+    <td>EC2 (run/stop/terminate in one region), S3 (one bucket only)</td>
+    <td>IAM actions explicitly denied; S3 scoped to specific bucket ARN; EC2 region-locked</td>
+  </tr>
+  <tr>
+    <td><strong>Auditors</strong></td>
+    <td>Read-only: IAM Get/List, S3 Get/List, EC2 Describe, CloudTrail, Config</td>
+    <td>Zero write/modify access anywhere</td>
+  </tr>
+  <tr>
+    <td><strong>EC2-S3 Role</strong></td>
+    <td>S3 GetObject, PutObject, ListBucket on one bucket</td>
+    <td>Scoped to specific bucket ARN; uses temporary credentials via Instance Profile</td>
+  </tr>
+</table>
+
+<div class="note">
+  <strong>Each tier gets progressively fewer permissions:</strong> Admins &gt; Developers &gt; Auditors.
+  Even Admins cannot touch billing or root-level account operations, and they must use MFA.
+  The EC2 role has the narrowest scope — only three S3 actions on a single bucket.
+</div>
+
+<!-- ════════════════════════════ 8. CONCLUSION ════════════════════════════ -->
+<h2>8. Conclusion</h2>
+<p>
+  This project successfully demonstrates the implementation of a rigorous IAM structure on AWS
+  following the <strong>Principle of Least Privilege</strong>:
+</p>
+<ul>
+  <li><strong>Three distinct IAM groups</strong> (Admins, Developers, Auditors) were created, each with
+    custom policies that grant only the minimum necessary permissions.</li>
+  <li><strong>MFA enforcement</strong> was applied to the Admins group using a deny-unless-MFA policy,
+    adding a critical second factor of authentication.</li>
+  <li>A <strong>custom IAM Role with Instance Profile</strong> enables EC2 instances to access S3 securely
+    without any hardcoded credentials, using temporary credentials that AWS rotates automatically.</li>
+  <li>The entire infrastructure was defined as <strong>Infrastructure as Code (IaC)</strong> using Terraform,
+    ensuring repeatability, auditability, and version control.</li>
+</ul>
+<p>
+  The deployment was verified via the AWS Console, with all 17 resources created successfully.
+  Screenshots confirm the creation of groups, policies, roles, the S3 bucket, MFA assignment,
+  and IAM user creation by an admin.
+</p>
+
+</body>
+</html>
